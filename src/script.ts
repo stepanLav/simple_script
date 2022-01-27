@@ -17,9 +17,11 @@ async function main() {
     //make a transfer
     await api.tx.currencies.transfer(Receiver, {'token': 'DOT'}, 100000000).signAndSend(newPair)
 
+    //recreate connection
     await api.disconnect()
     api = await connectionCreator(url)
 
+    //subscribe on balance
     api.query.tokens.accounts(newPair.address, {'token': 'DOT'}, ({ free }) => {
         console.log(`Balance from subscripttion is ${free}`)
         if (balance_before_transfer.toString() != free.toString()){
@@ -27,11 +29,14 @@ async function main() {
         }
     });
 
-    const interval = setInterval(doStuff, 1000)
+    const interval = setInterval(doCount, 1000)
 
     await delay(60000)
+
     console.log(`I can't fetch balance by subscription, let's reconnect and do it again...`)
     clearInterval(interval)
+
+    //recreate connection and try fetch balance again
     await api.disconnect()
     api = await connectionCreator(url)
     await print_current_balance(api, newPair)
@@ -48,12 +53,12 @@ const delay = ms => new Promise(res => setTimeout(res, ms));
 
 const print_current_balance = (api, keyPair) => new Promise(async resolve => {
     await api.query.tokens.accounts(keyPair.address, {'token': 'DOT'}, ({free}) => {
-        console.log(`Curent balance is ${free}`)
+        console.log(`Curent free balance is ${free}`)
         resolve(free)
     })
 })
 
-function doStuff() {
+function doCount() {
     console.count('Seconds after subscription')
  }
 
