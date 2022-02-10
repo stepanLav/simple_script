@@ -7,59 +7,36 @@ const url = 'wss://mandala.polkawallet.io'
 
 async function main() {
 
-    let api = await connectionCreator(url)
+    const firstApi = await connectionCreator(url)
 
     const keyring = new Keyring({ type: 'sr25519' })
     const newPair = keyring.addFromUri(PHRASE)
 
-    const balance_before_transfer = await print_current_balance(api, newPair)
-
-    //make a transfer
-    await api.tx.currencies.transfer(Receiver, {'token': 'DOT'}, 100000000).signAndSend(newPair)
-
-    //recreate connection
-    await api.disconnect()
-    api = await connectionCreator(url)
-
-    //subscribe on balance
-    api.query.tokens.accounts(newPair.address, {'token': 'DOT'}, ({ free }) => {
+    let count = 0
+    //subscribe to the balance from first connection
+    firstApi.query.tokens.accounts(newPair.address, { 'token': 'DOT' }, async ({ free }) => {
         console.log(`Balance from subscripttion is ${free}`)
-        if (balance_before_transfer.toString() != free.toString()){
-            throw new Error("Try again, it's happening 1/5 tymes")
+
+        //Create secon connection
+        const secondApi = await connectionCreator(url)
+
+        //make a transfer only one times
+        if (++count === 1) {
+            await firstApi.tx.currencies.transfer(Receiver, { 'token': 'DOT' }, 100000000).signAndSend(newPair)
+        }
+
+        //if subscribe to the balance from second connection immediately after first event it lead to the problem.
+        if (count === 2) {
+            secondApi.query.tokens.accounts(newPair.address, { 'token': 'DOT' }, async ({ free }) => {
+                console.log(`Balance from NEW subscripttion is ${free}`)
+            })
         }
     });
-
-    const interval = setInterval(doCount, 1000)
-
-    await delay(60000)
-
-    console.log(`I can't fetch balance by subscription, let's reconnect and do it again...`)
-    clearInterval(interval)
-
-    //recreate connection and try fetch balance again
-    await api.disconnect()
-    api = await connectionCreator(url)
-    await print_current_balance(api, newPair)
-
-    return
 }
 
 async function connectionCreator(url: string): Promise<ApiPromise> {
     const provider = new WsProvider(url)
-    return ApiPromise.create(options({provider}))
+    return ApiPromise.create(options({ provider }))
 }
-
-const delay = ms => new Promise(res => setTimeout(res, ms));
-
-const print_current_balance = (api, keyPair) => new Promise(async resolve => {
-    await api.query.tokens.accounts(keyPair.address, {'token': 'DOT'}, ({free}) => {
-        console.log(`Curent free balance is ${free}`)
-        resolve(free)
-    })
-})
-
-function doCount() {
-    console.count('Seconds after subscription')
- }
 
 main().catch(console.error).finally()
