@@ -17,7 +17,7 @@ async function main() {
     firstApi.query.tokens.accounts(newPair.address, { 'token': 'DOT' }, async ({ free }) => {
         console.log(`Balance from subscripttion is ${free}`)
 
-        //Create secon connection
+        //Create second connection
         const secondApi = await connectionCreator(url)
 
         //make a transfer only one times
@@ -25,7 +25,7 @@ async function main() {
             await firstApi.tx.currencies.transfer(Receiver, { 'token': 'DOT' }, 100000000).signAndSend(newPair)
         }
 
-        //if subscribe to the balance from second connection immediately after first event it lead to the problem.
+        //if subscribe to the balance with second connection immediately after have got updated event it lead to the problem.
         if (count === 2) {
             secondApi.query.tokens.accounts(newPair.address, { 'token': 'DOT' }, async ({ free }) => {
                 console.log(`Balance from NEW subscripttion is ${free}`)
