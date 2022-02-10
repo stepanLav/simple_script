@@ -7,7 +7,10 @@ const url = 'wss://mandala.polkawallet.io'
 
 async function main() {
 
+    //Create first connection
     const firstApi = await connectionCreator(url)
+    //Create second connection
+    const secondApi = await connectionCreator(url)
 
     const keyring = new Keyring({ type: 'sr25519' })
     const newPair = keyring.addFromUri(PHRASE)
@@ -16,9 +19,6 @@ async function main() {
     //subscribe to the balance from first connection
     firstApi.query.tokens.accounts(newPair.address, { 'token': 'DOT' }, async ({ free }) => {
         console.log(`Balance from subscripttion is ${free}`)
-
-        //Create second connection
-        const secondApi = await connectionCreator(url)
 
         //make a transfer only one times
         if (++count === 1) {
